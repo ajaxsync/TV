@@ -39,16 +39,27 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     private ActivityVodBinding mBinding;
     private TypeAdapter mAdapter;
     private View mOldView;
+    private boolean focusContent;
 
     public static void start(Activity activity, Result result) {
         start(activity, VodConfig.get().getHome().getKey(), result);
     }
 
+    public static void start(Activity activity, Result result, int index) {
+        start(activity, VodConfig.get().getHome().getKey(), result, index);
+    }
+
     public static void start(Activity activity, String key, Result result) {
+        start(activity, key, result, 0);
+    }
+
+    public static void start(Activity activity, String key, Result result, int index) {
         if (result == null || result.getTypes().isEmpty()) return;
         Intent intent = new Intent(activity, VodActivity.class);
         intent.putExtra("key", key);
         intent.putExtra("result", result);
+        intent.putExtra("index", index);
+        intent.putExtra("focusContent", index >= 0);
         activity.startActivity(intent);
     }
 
@@ -75,9 +86,22 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
 
     @Override
     protected void initView(Bundle savedInstanceState) {
+        focusContent = getIntent().getBooleanExtra("focusContent", false);
         setRecyclerView();
         setTypes();
         setPager();
+        int index = getIntent().getIntExtra("index", 0);
+        if (index > 0 && index < mAdapter.getItemCount()) {
+            mBinding.pager.setCurrentItem(index);
+            mBinding.recycler.setSelectedPosition(index);
+        }
+        if (focusContent) mBinding.pager.post(this::focusPageContent);
+    }
+
+    private void focusPageContent() {
+        if (!focusContent) return;
+        focusContent = false;
+        getFragment().focusContent();
     }
 
     @Override
@@ -86,7 +110,7 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
             @Override
             public void onPageSelected(int position) {
                 mBinding.recycler.setSelectedPosition(position);
-                mBinding.recycler.requestFocus();
+                if (focusContent) focusPageContent();
             }
         });
         mBinding.recycler.addOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
@@ -98,7 +122,7 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     }
 
     private void setRecyclerView() {
-        mBinding.recycler.requestFocus();
+        if (!focusContent) mBinding.recycler.requestFocus();
         mBinding.recycler.setHorizontalSpacing(ResUtil.dp2px(16));
         mBinding.recycler.setRowHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
         mBinding.recycler.setAdapter(mAdapter = new TypeAdapter(this));

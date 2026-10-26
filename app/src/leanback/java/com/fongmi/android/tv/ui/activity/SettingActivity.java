@@ -29,6 +29,7 @@ import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.dialog.ConfigDialog;
 import com.fongmi.android.tv.ui.dialog.DohDialog;
+import com.fongmi.android.tv.ui.dialog.LocalConnectDialog;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
 import com.fongmi.android.tv.ui.dialog.RestoreDialog;
@@ -50,6 +51,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
 
     private ActivitySettingBinding mBinding;
     private String[] size;
+    private boolean advancedOpen;
 
     public static void start(Activity activity) {
         activity.startActivity(new Intent(activity, SettingActivity.class));
@@ -77,8 +79,17 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         mBinding.liveUrl.setText(LiveConfig.getDesc());
         mBinding.wallUrl.setText(WallConfig.getDesc());
         mBinding.versionText.setText(BuildConfig.VERSION_NAME);
+        mBinding.detailFirstText.setText(Setting.getSwitch(Setting.isDetailFirst()));
         setCacheText();
         setOtherText();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mBinding.vodUrl.setText(VodConfig.getDesc());
+        mBinding.liveUrl.setText(LiveConfig.getDesc());
+        mBinding.wallUrl.setText(WallConfig.getDesc());
     }
 
     private void setOtherText() {
@@ -99,6 +110,10 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     @Override
     protected void initEvent() {
         mBinding.vod.setOnClickListener(this::onVod);
+        mBinding.keep.setOnClickListener(view -> KeepActivity.start(this));
+        mBinding.connect.setOnClickListener(view -> LocalConnectDialog.show(this, "push"));
+        mBinding.advanced.setOnClickListener(view -> setAdvanced(advancedOpen = !advancedOpen));
+        mBinding.detailFirst.setOnClickListener(this::setDetailFirst);
         mBinding.doh.setOnClickListener(this::setDoh);
         mBinding.live.setOnClickListener(this::onLive);
         mBinding.wall.setOnClickListener(this::onWall);
@@ -175,12 +190,28 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         LiveConfig.get().setHome(item);
     }
 
+    private void setAdvanced(boolean open) {
+        int visibility = open ? View.VISIBLE : View.GONE;
+        mBinding.wallRow.setVisibility(visibility);
+        mBinding.danmaku.setVisibility(visibility);
+        mBinding.module.setVisibility(visibility);
+        mBinding.privacyRow.setVisibility(visibility);
+        mBinding.backupRow.setVisibility(visibility);
+        mBinding.cache.setVisibility(visibility);
+        mBinding.detailFirst.setVisibility(visibility);
+    }
+
+    private void setDetailFirst(View view) {
+        Setting.putDetailFirst(!Setting.isDetailFirst());
+        mBinding.detailFirstText.setText(Setting.getSwitch(Setting.isDetailFirst()));
+    }
+
     private void onVod(View view) {
-        ConfigDialog.create().vod().show(this);
+        ConfigActivity.vod(this);
     }
 
     private void onLive(View view) {
-        ConfigDialog.create().live().show(this);
+        ConfigActivity.live(this);
     }
 
     private void onWall(View view) {

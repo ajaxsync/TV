@@ -188,6 +188,11 @@
             android:configChanges="screenSize|smallestScreenSize|screenLayout" />
 
         <activity
+            android:name=".ui.activity.ConfigActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".ui.activity.KeepActivity"
             android:configChanges="screenSize|smallestScreenSize|screenLayout" />
 

@@ -30,6 +30,7 @@ import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.activity.HomeActivity;
 import com.fongmi.android.tv.ui.base.BaseFragment;
+import com.fongmi.android.tv.ui.activity.ConfigActivity;
 import com.fongmi.android.tv.ui.dialog.ConfigDialog;
 import com.fongmi.android.tv.ui.dialog.DeviceConnectDialog;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
@@ -56,6 +57,7 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
 
     private FragmentSettingBinding mBinding;
     private String[] size;
+    private boolean advancedOpen;
 
     public static SettingFragment newInstance() {
         return new SettingFragment();
@@ -93,8 +95,19 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
         mBinding.liveUrl.setText(LiveConfig.getDesc());
         mBinding.wallUrl.setText(WallConfig.getDesc());
         mBinding.versionText.setText(BuildConfig.VERSION_NAME);
+        mBinding.detailFirstText.setText(Setting.getSwitch(Setting.isDetailFirst()));
+        setAdvanced(false);
         setOtherText();
         setCacheText();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (mBinding == null) return;
+        mBinding.vodUrl.setText(VodConfig.getDesc());
+        mBinding.liveUrl.setText(LiveConfig.getDesc());
+        mBinding.wallUrl.setText(WallConfig.getDesc());
     }
 
     private void setOtherText() {
@@ -116,6 +129,8 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
     @Override
     protected void initEvent() {
         mBinding.vod.setOnClickListener(this::onVod);
+        mBinding.advanced.setOnClickListener(view -> setAdvanced(advancedOpen = !advancedOpen));
+        mBinding.detailFirst.setOnClickListener(this::setDetailFirst);
         mBinding.doh.setOnClickListener(this::setDoh);
         mBinding.live.setOnClickListener(this::onLive);
         mBinding.wall.setOnClickListener(this::onWall);
@@ -206,12 +221,32 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
         RefreshEvent.theme();
     }
 
+    private void setAdvanced(boolean open) {
+        int visibility = open ? View.VISIBLE : View.GONE;
+        mBinding.wall.setVisibility(visibility);
+        mBinding.wallDefault.setVisibility(visibility);
+        mBinding.wallRefresh.setVisibility(visibility);
+        mBinding.danmaku.setVisibility(visibility);
+        mBinding.module.setVisibility(visibility);
+        mBinding.incognito.setVisibility(visibility);
+        mBinding.doh.setVisibility(visibility);
+        mBinding.backup.setVisibility(visibility);
+        mBinding.restore.setVisibility(visibility);
+        mBinding.cache.setVisibility(visibility);
+        mBinding.detailFirst.setVisibility(visibility);
+    }
+
+    private void setDetailFirst(View view) {
+        Setting.putDetailFirst(!Setting.isDetailFirst());
+        mBinding.detailFirstText.setText(Setting.getSwitch(Setting.isDetailFirst()));
+    }
+
     private void onVod(View view) {
-        ConfigDialog.create().vod().show(this);
+        ConfigActivity.vod(requireActivity());
     }
 
     private void onLive(View view) {
-        ConfigDialog.create().live().show(this);
+        ConfigActivity.live(requireActivity());
     }
 
     private void onWall(View view) {

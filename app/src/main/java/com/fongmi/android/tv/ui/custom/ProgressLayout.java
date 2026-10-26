@@ -6,7 +6,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
+import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.ViewEmptyBinding;
 import com.fongmi.android.tv.databinding.ViewProgressBinding;
 
@@ -69,6 +71,12 @@ public class ProgressLayout extends RelativeLayout {
 
     public void showProgress() {
         switchState(State.PROGRESS);
+    }
+
+    public void setEmptyText(CharSequence text) {
+        if (mEmptyView == null) return;
+        TextView view = mEmptyView.findViewById(R.id.text);
+        if (view != null) view.setText(text);
     }
 
     public void showEmpty() {

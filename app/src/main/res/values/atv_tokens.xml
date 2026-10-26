@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark surfaces for shelf focus. Platform font only; no proprietary system typeface. -->
+    <color name="atv_bg">#0C0C0E</color>
+    <color name="atv_surface">#1C1C1E</color>
+    <color name="atv_surface_focus">#F5F5F7</color>
+    <color name="atv_on_focus">#0C0C0E</color>
+    <color name="atv_text_secondary">#A1A1A6</color>
+
+    <dimen name="atv_nav_gap">12dp</dimen>
+    <dimen name="atv_page_padding">24dp</dimen>
+    <dimen name="atv_focus_radius">12dp</dimen>
+</resources>

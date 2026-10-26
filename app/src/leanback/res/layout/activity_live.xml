@@ -85,5 +85,29 @@
             tools:listitem="@layout/adapter_epg_data" />
 
     </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/emptyConfig"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/atv_bg"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:text="@string/atv_empty_live"
+            android:textColor="@color/atv_text_secondary"
+            android:textSize="18sp" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/addLive"
+            style="@style/Atv.Primary"
+            android:text="@string/atv_add_live" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
 </FrameLayout>
 

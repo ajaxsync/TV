@@ -255,8 +255,33 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void checkLive() {
+        if (!LiveConfig.hasUrl()) {
+            showEmptyConfig();
+            return;
+        }
+        hideEmptyConfig();
         if (isEmpty()) LiveConfig.get().init().load(getCallback());
         else getLive();
+    }
+
+    private void showEmptyConfig() {
+        mBinding.emptyConfig.setVisibility(View.VISIBLE);
+        mBinding.video.setFocusable(false);
+        mBinding.video.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+        mBinding.addLive.setOnClickListener(view -> ConfigActivity.live(this));
+        mBinding.addLive.requestFocus();
+    }
+
+    private void hideEmptyConfig() {
+        mBinding.emptyConfig.setVisibility(View.GONE);
+        mBinding.video.setFocusable(true);
+        mBinding.video.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mBinding.emptyConfig.getVisibility() == View.VISIBLE && LiveConfig.hasUrl()) checkLive();
     }
 
     private Callback getCallback() {

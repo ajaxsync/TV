@@ -15,10 +15,12 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewpager.widget.ViewPager;
 
+import com.fongmi.android.tv.Product;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Class;
 import com.fongmi.android.tv.bean.Config;
+import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Value;
@@ -32,13 +34,14 @@ import com.fongmi.android.tv.impl.ConfigListener;
 import com.fongmi.android.tv.impl.FilterListener;
 import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.model.SiteViewModel;
+import com.fongmi.android.tv.ui.activity.ConfigActivity;
 import com.fongmi.android.tv.ui.activity.HistoryActivity;
+import com.fongmi.android.tv.ui.adapter.HistoryAdapter;
 import com.fongmi.android.tv.ui.activity.KeepActivity;
 import com.fongmi.android.tv.ui.activity.SearchActivity;
 import com.fongmi.android.tv.ui.adapter.TypeAdapter;
 import com.fongmi.android.tv.ui.base.BaseFragment;
 import com.fongmi.android.tv.ui.dialog.FilterDialog;
-import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.LinkDialog;
 import com.fongmi.android.tv.ui.dialog.ReceiveDialog;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
@@ -51,6 +54,7 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -59,6 +63,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     private FragmentVodBinding mBinding;
     private SiteViewModel mViewModel;
     private TypeAdapter mAdapter;
+    private HistoryAdapter mContinueAdapter;
     private Result mResult;
 
     public static VodFragment newInstance() {
@@ -87,14 +92,24 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         EventBus.getDefault().register(this);
         mBinding.title.setSelected(true);
         setRecyclerView();
+        setContinue();
         setViewModel();
         showProgress();
         setTitle();
         setLogo();
+        updateEmpty();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        updateEmpty();
+        setContinue();
     }
 
     @Override
     protected void initEvent() {
+        mBinding.addVod.setOnClickListener(view -> ConfigActivity.vod(requireActivity()));
         mBinding.top.setOnClickListener(this::onTop);
         mBinding.logo.setOnClickListener(this::onLogo);
         mBinding.link.setOnClickListener(this::onLink);
@@ -173,7 +188,39 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     }
 
     private void onLogo(View view) {
-        HistoryDialog.create().vod().readOnly().show(this);
+        ConfigActivity.vod(requireActivity());
+    }
+
+    private void updateEmpty() {
+        boolean empty = TextUtils.isEmpty(VodConfig.getUrl());
+        mBinding.emptyConfig.setVisibility(empty ? View.VISIBLE : View.GONE);
+        mBinding.link.setVisibility(empty ? View.GONE : View.VISIBLE);
+        if (empty) hideContent();
+        else showContent();
+    }
+
+    private void setContinue() {
+        if (mContinueAdapter == null) {
+            mContinueAdapter = new HistoryAdapter(new HistoryAdapter.OnClickListener() {
+                @Override
+                public void onItemClick(History item) {
+                    VideoActivity.resume(requireActivity(), item);
+                }
+
+                @Override
+                public void onItemDelete(History item) {
+                }
+
+                @Override
+                public boolean onLongClick() {
+                    return false;
+                }
+            });
+            mContinueAdapter.setSize(Product.getSpec(requireActivity()));
+            mBinding.continueList.setAdapter(mContinueAdapter);
+        }
+        List<History> items = TextUtils.isEmpty(VodConfig.getUrl()) ? Collections.emptyList() : History.get();
+        mContinueAdapter.setItems(items, hasChange -> mBinding.continueRow.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE));
     }
 
     private void onSite(View view) {
@@ -227,7 +274,11 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onConfigEvent(ConfigEvent event) {
-        if (event.type() == ConfigEvent.Type.VOD) setLogo();
+        if (event.type() == ConfigEvent.Type.VOD) {
+            setLogo();
+            updateEmpty();
+            setContinue();
+        }
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)

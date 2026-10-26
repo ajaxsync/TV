@@ -136,4 +136,13 @@ public class Setting {
     public static void putZhuyin(boolean zhuyin) {
         Prefers.put("zhuyin", zhuyin);
     }
+
+    /** When true, a title opens detail with Play focused. Default is direct play. */
+    public static boolean isDetailFirst() {
+        return Prefers.getBoolean("detail_first", false);
+    }
+
+    public static void putDetailFirst(boolean detailFirst) {
+        Prefers.put("detail_first", detailFirst);
+    }
 }

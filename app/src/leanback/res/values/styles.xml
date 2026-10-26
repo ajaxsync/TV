@@ -22,7 +22,9 @@
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
     </style>
 
-    <style name="Theme.App" parent="Theme.Base" />
+    <style name="Theme.App" parent="Theme.Base">
+        <item name="android:windowBackground">@color/atv_bg</item>
+    </style>
 
     <style name="Theme.Crash" parent="Theme.Base">
         <item name="android:windowBackground">@color/grey_800</item>

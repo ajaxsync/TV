@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="atv_continue">Continue watching</string>
+    <string name="atv_categories">Categories</string>
+    <string name="atv_add_vod">Add VOD config</string>
+    <string name="atv_add_live">Add live config</string>
+    <string name="atv_empty_vod">No VOD config yet. Add one to fill the shelves.</string>
+    <string name="atv_empty_live">No live config yet.</string>
+    <string name="atv_history_empty">Nothing to continue.</string>
+    <string name="atv_config_history">Config addresses</string>
+    <string name="atv_load">Load</string>
+    <string name="atv_play">Play</string>
+    <string name="atv_pause">Pause</string>
+    <string name="atv_lines">Lines</string>
+    <string name="atv_more">More</string>
+    <string name="atv_advanced">Advanced</string>
+    <string name="atv_favorites">Favorites</string>
+    <string name="atv_connect">Connect</string>
+    <string name="atv_detail_first">Open detail before play</string>
+    <string name="atv_config_vod_title">VOD config</string>
+    <string name="atv_config_live_title">Live config</string>
+    <string name="atv_watch_history">Watch history</string>
+</resources>

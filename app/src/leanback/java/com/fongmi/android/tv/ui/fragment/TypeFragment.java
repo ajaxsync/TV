@@ -254,6 +254,11 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         return mBinding != null && mBinding.recycler.moveToTop();
     }
 
+    public void focusContent() {
+        if (mBinding == null) return;
+        mBinding.recycler.post(() -> mBinding.recycler.requestFocus());
+    }
+
     @Override
     public void onItemClick(Vod item) {
         if (item.isAction()) {
@@ -263,7 +268,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
             headerVisible = mBinding.recycler.isHeaderVisible();
         } else {
             if (getSite().isIndex()) CollectActivity.start(requireActivity(), item.getName());
-            else VideoActivity.start(requireActivity(), getKey(), item.getId(), item.getName(), item.getPic(), isFolder() ? item.getName() : null);
+            else VideoActivity.open(requireActivity(), getKey(), item.getId(), item.getName(), item.getPic(), isFolder() ? item.getName() : null, false);
         }
     }
 

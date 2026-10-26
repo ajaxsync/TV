@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="atv_continue">继续观看</string>
+    <string name="atv_categories">分类</string>
+    <string name="atv_add_vod">添加点播配置</string>
+    <string name="atv_add_live">添加直播配置</string>
+    <string name="atv_empty_vod">还没有点播配置。添加后这里会出现货架。</string>
+    <string name="atv_empty_live">还没有直播配置。</string>
+    <string name="atv_history_empty">没有可继续的观看记录。</string>
+    <string name="atv_config_history">配置地址</string>
+    <string name="atv_load">加载</string>
+    <string name="atv_play">播放</string>
+    <string name="atv_pause">暂停</string>
+    <string name="atv_lines">线路</string>
+    <string name="atv_more">更多</string>
+    <string name="atv_advanced">高级</string>
+    <string name="atv_favorites">收藏</string>
+    <string name="atv_connect">连接</string>
+    <string name="atv_detail_first">先打开详情再播放</string>
+    <string name="atv_config_vod_title">点播配置</string>
+    <string name="atv_config_live_title">直播配置</string>
+    <string name="atv_watch_history">播放历史</string>
+</resources>

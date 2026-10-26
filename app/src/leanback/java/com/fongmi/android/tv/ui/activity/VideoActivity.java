@@ -65,6 +65,7 @@ import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.setting.DanmakuSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
+import com.fongmi.android.tv.ui.atv.AtvInteraction;
 import com.fongmi.android.tv.setting.SpeedSetting;
 import com.fongmi.android.tv.ui.adapter.ArrayAdapter;
 import com.fongmi.android.tv.ui.adapter.EpisodeAdapter;
@@ -127,6 +128,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     private Runnable mR4;
     private History mHistory;
     private boolean fullscreen;
+    private boolean showLines;
     private boolean webFullscreen;
     private boolean externalPlaybackCompleted;
     private boolean useParse;
@@ -165,6 +167,18 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     public static void start(Activity activity, String key, String id, String name, String pic, String mark) {
         start(activity, key, id, name, pic, mark, false, false);
+    }
+
+    public static void open(Activity activity, String key, String id, String name, String pic) {
+        open(activity, key, id, name, pic, null, false);
+    }
+
+    public static void open(Activity activity, String key, String id, String name, String pic, String mark, boolean collect) {
+        start(activity, key, id, name, pic, mark, collect, AtvInteraction.directPlay());
+    }
+
+    public static void resume(Activity activity, History history) {
+        start(activity, history.getSiteKey(), history.getVodId(), history.getVodName(), history.getVodPic(), null, false, true);
     }
 
     public static void start(Activity activity, String key, String id, String name, String pic, String mark, boolean collect, boolean cast) {
@@ -303,7 +317,11 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     @SuppressLint("ClickableViewAccessibility")
     protected void initEvent() {
         mBinding.keep.setOnClickListener(view -> onKeep());
+        mBinding.play.setOnClickListener(view -> onVideo());
+        mBinding.lines.setOnClickListener(view -> onLines());
         mBinding.video.setOnClickListener(view -> onVideo());
+        mBinding.control.action.playPause.setOnClickListener(view -> onPlayPause());
+        mBinding.control.action.more.setOnClickListener(view -> onMore());
         mBinding.change.setOnClickListener(view -> onChange());
         mBinding.content.setOnClickListener(view -> onContent());
         mBinding.control.action.text.setOnClickListener(this::onTrack);
@@ -376,7 +394,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void setVideoView() {
-        setSeekNextFocusDown(R.id.next);
+        setSeekNextFocusDown(R.id.playPause);
         setActionFocusBoundary(mBinding.control.action.getRoot());
         PlayerEngineDialog.setText(mBinding.control.action.player);
         mBinding.control.action.danmaku.setVisibility(DanmakuSetting.isLoad() ? View.VISIBLE : View.GONE);
@@ -599,7 +617,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mHistory = history;
         mBinding.progressLayout.showContent();
         renderFallbackName(item.getName());
-        mBinding.video.requestFocus();
+        if (isFullscreen()) mBinding.video.requestFocus();
+        else mBinding.play.requestFocus();
         App.removeCallbacks(mR4);
         setArtwork(item.getPic());
         checkKeepImg();
@@ -635,8 +654,35 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void renderFlags(List<Flag> items) {
-        mBinding.flag.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
         mFlagAdapter.addAll(items);
+        applyFlagVisibility();
+    }
+
+    private void applyFlagVisibility() {
+        mBinding.flag.setVisibility(showLines && mFlagAdapter.getItemCount() > 0 ? View.VISIBLE : View.GONE);
+    }
+
+    private void onLines() {
+        showLines = !showLines;
+        applyFlagVisibility();
+        if (isVisible(mBinding.flag)) mBinding.flag.requestFocus();
+    }
+
+    private void showMorePanel() {
+        mBinding.control.action.morePanel.setVisibility(View.VISIBLE);
+    }
+
+    private void onMore() {
+        boolean open = !isVisible(mBinding.control.action.morePanel);
+        mBinding.control.action.morePanel.setVisibility(open ? View.VISIBLE : View.GONE);
+        if (open) mBinding.control.action.player.requestFocus();
+    }
+
+    private void onPlayPause() {
+        if (isPlayingForControls()) onPaused();
+        else if (!isWebPlaybackActive() && player().isEmpty()) onRefresh();
+        else onPlay();
+        hideControl();
     }
 
     @Override
@@ -1135,6 +1181,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void showControl(View view) {
         updateDiscMenuVisibility();
+        mBinding.control.action.playPause.setText(isPlayingForControls() ? R.string.atv_pause : R.string.atv_play);
         mBinding.control.getRoot().setVisibility(View.VISIBLE);
         view.requestFocus();
         setR1Callback();
@@ -1342,7 +1389,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         boolean focused = button.hasFocus();
         boolean available = hasDiscMenu();
         button.setVisibility(available ? View.VISIBLE : View.GONE);
-        if (!available && focused && mBinding.control.getRoot().getVisibility() == View.VISIBLE) mBinding.control.action.opening.requestFocus();
+        if (!available && focused && mBinding.control.getRoot().getVisibility() == View.VISIBLE) mBinding.control.action.playPause.requestFocus();
     }
 
     @Override
@@ -1537,7 +1584,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private View getFocus2() {
-        return mFocus2 == null || !mFocus2.isAttachedToWindow() || mFocus2.getVisibility() != View.VISIBLE || mFocus2 == mBinding.control.action.opening || mFocus2 == mBinding.control.action.ending ? mBinding.control.action.next : mFocus2;
+        return mFocus2 == null || !mFocus2.isAttachedToWindow() || mFocus2.getVisibility() != View.VISIBLE || mFocus2 == mBinding.control.action.opening || mFocus2 == mBinding.control.action.ending ? mBinding.control.action.playPause : mFocus2;
     }
 
     @Override
@@ -1549,7 +1596,16 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
             hideControl();
             return true;
         }
-        if (isFullscreen() && KeyUtil.isMenuKey(event)) onToggle();
+        if (isFullscreen() && KeyUtil.isMenuKey(event)) {
+            if (isGone(mBinding.control.getRoot())) showControl(mBinding.control.action.more);
+            onMore();
+            return true;
+        }
+        int code = event.getKeyCode();
+        if (isFullscreen() && (code == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || code == KeyEvent.KEYCODE_MEDIA_PLAY || code == KeyEvent.KEYCODE_MEDIA_PAUSE)) {
+            if (KeyUtil.isActionUp(event)) onPlayPause();
+            return true;
+        }
         if (isVisible(mBinding.control.getRoot())) setR1Callback();
         if (isVisible(mBinding.control.getRoot())) mFocus2 = getCurrentFocus();
         if (isFullscreen() && isGone(mBinding.control.getRoot()) && service() != null && mInput.onKeyEvent(event)) return true;
@@ -1586,9 +1642,13 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     public void onKeyUp() {
         long position = player().getPosition();
         long duration = player().getDuration();
-        if (player().canSetOpening(position, duration)) showControl(mBinding.control.action.opening);
-        else if (player().canSetEnding(position, duration)) showControl(mBinding.control.action.ending);
-        else showControl(getFocus2());
+        if (player().canSetOpening(position, duration)) {
+            showMorePanel();
+            showControl(mBinding.control.action.opening);
+        } else if (player().canSetEnding(position, duration)) {
+            showMorePanel();
+            showControl(mBinding.control.action.ending);
+        } else showControl(getFocus2());
     }
 
     @Override
@@ -1598,10 +1658,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void onKeyCenter() {
-        if (isPlayingForControls()) onPaused();
-        else if (!isWebPlaybackActive() && player().isEmpty()) onRefresh();
-        else onPlay();
-        hideControl();
+        if (isVisible(mBinding.control.getRoot())) hideControl();
+        else showControl(mBinding.control.action.playPause);
     }
 
     @Override

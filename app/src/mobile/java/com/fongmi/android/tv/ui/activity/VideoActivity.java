@@ -81,6 +81,7 @@ import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.setting.DanmakuSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
+import com.fongmi.android.tv.ui.atv.AtvInteraction;
 import com.fongmi.android.tv.setting.SpeedSetting;
 import com.fongmi.android.tv.ui.adapter.EpisodeAdapter;
 import com.fongmi.android.tv.ui.adapter.FlagAdapter;
@@ -147,6 +148,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
     private Runnable mR4;
     private History mHistory;
     private boolean fullscreen;
+    private boolean showLines;
     private boolean webFullscreen;
     private boolean externalPlaybackCompleted;
     private boolean useParse;
@@ -186,6 +188,32 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
 
     public static void start(Activity activity, String key, String id, String name, String pic, String mark) {
         start(activity, key, id, name, pic, mark, false);
+    }
+
+    public static void open(Activity activity, String key, String id, String name, String pic) {
+        open(activity, key, id, name, pic, null, false);
+    }
+
+    public static void open(Activity activity, String key, String id, String name, String pic, String mark, boolean collect) {
+        Intent intent = new Intent(activity, VideoActivity.class);
+        intent.putExtra("collect", collect);
+        intent.putExtra("direct", AtvInteraction.directPlay());
+        intent.putExtra("mark", mark);
+        intent.putExtra("name", name);
+        intent.putExtra("key", key);
+        intent.putExtra("id", id);
+        putPic(intent, pic);
+        activity.startActivity(intent);
+    }
+
+    public static void resume(Activity activity, History history) {
+        Intent intent = new Intent(activity, VideoActivity.class);
+        intent.putExtra("direct", true);
+        intent.putExtra("name", history.getVodName());
+        intent.putExtra("key", history.getSiteKey());
+        intent.putExtra("id", history.getVodId());
+        putPic(intent, history.getVodPic());
+        activity.startActivity(intent);
     }
 
     public static void start(Activity activity, String key, String id, String name, String pic, String mark, boolean collect) {
@@ -342,6 +370,8 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
         mBinding.more.setOnClickListener(view -> onMore());
         mBinding.actor.setOnClickListener(view -> onActor());
         mBinding.content.setOnClickListener(view -> onContent());
+        mBinding.play.setOnClickListener(view -> enterFullscreen());
+        mBinding.lines.setOnClickListener(view -> onLines());
         mBinding.reverse.setOnClickListener(view -> onReverse());
         mBinding.director.setOnClickListener(view -> onDirector());
         mBinding.name.setOnLongClickListener(view -> onChange());
@@ -653,6 +683,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
         mBinding.swipeLayout.setRefreshing(false);
         mBinding.progressLayout.showContent();
         renderFallbackName(item.getName());
+        if (getIntent().getBooleanExtra("direct", false) && !isFullscreen()) enterFullscreen();
         App.removeCallbacks(mR4);
         setArtwork(item.getPic());
         checkKeepImg();
@@ -687,8 +718,19 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
 
     @Override
     public void renderFlags(List<Flag> items) {
-        mBinding.flag.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
         mFlagAdapter.addAll(items);
+        applyFlagVisibility();
+    }
+
+    private void applyFlagVisibility() {
+        int visibility = showLines && mFlagAdapter.getItemCount() > 0 ? View.VISIBLE : View.GONE;
+        mBinding.flag.setVisibility(visibility);
+        mBinding.flagLabel.setVisibility(visibility);
+    }
+
+    private void onLines() {
+        showLines = !showLines;
+        applyFlagVisibility();
     }
 
     @Override

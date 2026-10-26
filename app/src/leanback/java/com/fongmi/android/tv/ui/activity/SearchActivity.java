@@ -77,6 +77,7 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
         setRecyclerView();
         checkKeyword();
         onSearch();
+        mBinding.keyboard.post(this::focusInput);
     }
 
     @Override
@@ -309,7 +310,13 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     protected void onResume() {
         super.onResume();
         mBinding.mic.setFocusable(true);
-        mBinding.keyword.requestFocus();
+        focusInput();
+    }
+
+    private void focusInput() {
+        View child = mBinding.keyboard.getChildAt(0);
+        if (child != null) child.requestFocus();
+        else mBinding.keyword.requestFocus();
     }
 
     @Override

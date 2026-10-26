@@ -60,6 +60,7 @@ public class HistoryActivity extends BaseActivity implements HistoryAdapter.OnCl
     }
 
     private void getHistory() {
+        mBinding.progressLayout.setEmptyText(getString(R.string.atv_history_empty));
         mAdapter.setItems(History.get(), (hasChange) -> {
             mBinding.progressLayout.showContent(true, mAdapter.getItemCount());
             if (hasChange) mBinding.recycler.scrollToPosition(0);
@@ -85,7 +86,7 @@ public class HistoryActivity extends BaseActivity implements HistoryAdapter.OnCl
 
     @Override
     public void onItemClick(History item) {
-        VideoActivity.start(this, item.getSiteKey(), item.getVodId(), item.getVodName(), item.getVodPic());
+        VideoActivity.resume(this, item);
     }
 
     @Override

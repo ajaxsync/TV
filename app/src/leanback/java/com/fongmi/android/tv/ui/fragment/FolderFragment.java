@@ -68,6 +68,10 @@ public class FolderFragment extends BaseFragment {
         return extend;
     }
 
+    public void focusContent() {
+        Optional.ofNullable(getChild()).ifPresent(TypeFragment::focusContent);
+    }
+
     public void openFolder(String typeId, HashMap<String, String> extend) {
         TypeFragment next = TypeFragment.newInstance(getKey(), typeId, mType.getStyle(), extend, mType.isFolder());
         FragmentTransaction ft = getChildFragmentManager().beginTransaction();
