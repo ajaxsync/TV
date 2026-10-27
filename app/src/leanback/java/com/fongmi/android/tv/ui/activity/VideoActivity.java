@@ -80,6 +80,7 @@ import com.fongmi.android.tv.ui.dialog.ContentDialog;
 import com.fongmi.android.tv.ui.dialog.DanmakuDialog;
 import com.fongmi.android.tv.ui.dialog.DecoderSettingDialog;
 import com.fongmi.android.tv.ui.dialog.EditionDialog;
+import com.fongmi.android.tv.ui.dialog.EpisodeSideDialog;
 import com.fongmi.android.tv.ui.dialog.ParseDialog;
 import com.fongmi.android.tv.ui.dialog.PlayerEngineDialog;
 import com.fongmi.android.tv.ui.dialog.SpeedSettingDialog;
@@ -249,7 +250,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     private void setScale(int scale) {
         mVod.setScale(scale);
         mBinding.player.setResizeMode(PlayerSetting.getScaleMode(scale));
-        mBinding.control.action.scale.setText(ResUtil.getStringArray(R.array.select_scale)[scale]);
+        mBinding.sheet.scale.setText(ResUtil.getStringArray(R.array.select_scale)[scale]);
     }
 
     @Override
@@ -322,35 +323,32 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mBinding.video.setOnClickListener(view -> onVideo());
         mBinding.control.action.playPause.setOnClickListener(view -> onPlayPause());
         mBinding.control.action.more.setOnClickListener(view -> onMore());
+        mBinding.control.action.episodes.setOnClickListener(view -> onEpisodes());
         mBinding.change.setOnClickListener(view -> onChange());
         mBinding.content.setOnClickListener(view -> onContent());
-        mBinding.control.action.text.setOnClickListener(this::onTrack);
-        mBinding.control.action.audio.setOnClickListener(this::onTrack);
-        mBinding.control.action.video.setOnClickListener(this::onTrack);
-        mBinding.control.action.ending.setUpListener(this::onEndingAdd);
-        mBinding.control.action.ending.setDownListener(this::onEndingSub);
-        mBinding.control.action.opening.setUpListener(this::onOpeningAdd);
-        mBinding.control.action.opening.setDownListener(this::onOpeningSub);
+        mBinding.sheet.text.setOnClickListener(this::onTrack);
+        mBinding.sheet.audio.setOnClickListener(this::onTrack);
+        mBinding.sheet.video.setOnClickListener(this::onTrack);
         mBinding.control.action.next.setOnClickListener(view -> checkNext());
         mBinding.control.action.prev.setOnClickListener(view -> checkPrev());
-        mBinding.control.action.scale.setOnClickListener(view -> onScale());
+        mBinding.sheet.scale.setOnClickListener(view -> onScale());
         mBinding.control.action.speed.setOnClickListener(view -> onSpeed());
-        mBinding.control.action.reset.setOnClickListener(view -> onReset());
-        mBinding.control.action.replay.setOnClickListener(view -> onReplay());
-        mBinding.control.action.parse.setOnClickListener(view -> onParse());
-        mBinding.control.action.player.setOnClickListener(view -> onPlayer());
-        mBinding.control.action.decoder.setOnClickListener(view -> onDecoder());
-        mBinding.control.action.ending.setOnClickListener(view -> onEnding());
-        mBinding.control.action.repeat.setOnClickListener(view -> onRepeat());
-        mBinding.control.action.danmaku.setOnClickListener(view -> onDanmaku());
-        mBinding.control.action.edition.setOnClickListener(view -> onEdition());
-        mBinding.control.action.chapter.setOnClickListener(view -> onChapter());
-        mBinding.control.action.discMenu.setOnClickListener(this::onDiscMenu);
-        mBinding.control.action.discMenu.setOnLongClickListener(this::onDiscMenuLong);
-        mBinding.control.action.opening.setOnClickListener(view -> onOpening());
+        mBinding.sheet.reset.setOnClickListener(view -> onReset());
+        mBinding.sheet.replay.setOnClickListener(view -> onReplay());
+        mBinding.sheet.parse.setOnClickListener(view -> onParse());
+        mBinding.sheet.player.setOnClickListener(view -> onPlayer());
+        mBinding.sheet.decoder.setOnClickListener(view -> onDecoder());
+        mBinding.sheet.ending.setOnClickListener(view -> onEnding());
+        mBinding.sheet.repeat.setOnClickListener(view -> onRepeat());
+        mBinding.sheet.danmaku.setOnClickListener(view -> onDanmaku());
+        mBinding.sheet.edition.setOnClickListener(view -> onEdition());
+        mBinding.sheet.chapter.setOnClickListener(view -> onChapter());
+        mBinding.sheet.discMenu.setOnClickListener(this::onDiscMenu);
+        mBinding.sheet.discMenu.setOnLongClickListener(this::onDiscMenuLong);
+        mBinding.sheet.opening.setOnClickListener(view -> onOpening());
         mBinding.control.action.speed.setOnLongClickListener(view -> onSpeedLong());
-        mBinding.control.action.ending.setOnLongClickListener(view -> onEndingReset());
-        mBinding.control.action.opening.setOnLongClickListener(view -> onOpeningReset());
+        mBinding.sheet.ending.setOnLongClickListener(view -> onEndingReset());
+        mBinding.sheet.opening.setOnLongClickListener(view -> onOpeningReset());
         mBinding.video.setOnTouchListener((view, event) -> mInput.onTouchEvent(event));
         mBinding.flag.addOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
             @Override
@@ -396,13 +394,13 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     private void setVideoView() {
         setSeekNextFocusDown(R.id.playPause);
         setActionFocusBoundary(mBinding.control.action.getRoot());
-        PlayerEngineDialog.setText(mBinding.control.action.player);
-        mBinding.control.action.danmaku.setVisibility(DanmakuSetting.isLoad() ? View.VISIBLE : View.GONE);
+        PlayerEngineDialog.setText(mBinding.sheet.player);
+        mBinding.sheet.danmaku.setVisibility(DanmakuSetting.isLoad() ? View.VISIBLE : View.GONE);
     }
 
     private void setPlaybackMode() {
         if (isWebPlaybackActive()) return;
-        PlaybackAction.setPlaybackMode(player(), mBinding.control.action.player);
+        PlaybackAction.setPlaybackMode(player(), mBinding.sheet.player);
     }
 
     private void setViewModel() {
@@ -669,13 +667,25 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void showMorePanel() {
-        mBinding.control.action.morePanel.setVisibility(View.VISIBLE);
+        mBinding.sheet.getRoot().setVisibility(View.VISIBLE);
+    }
+
+    private void hideMore() {
+        mBinding.sheet.getRoot().setVisibility(View.GONE);
     }
 
     private void onMore() {
-        boolean open = !isVisible(mBinding.control.action.morePanel);
-        mBinding.control.action.morePanel.setVisibility(open ? View.VISIBLE : View.GONE);
-        if (open) mBinding.control.action.player.requestFocus();
+        boolean open = !isVisible(mBinding.sheet.getRoot());
+        hideControl();
+        if (!open) return;
+        showMorePanel();
+        mBinding.sheet.player.requestFocus();
+    }
+
+    private void onEpisodes() {
+        if (mEpisodeAdapter.getItemCount() == 0) return;
+        EpisodeSideDialog.show(this);
+        hideControl();
     }
 
     private void onPlayPause() {
@@ -728,8 +738,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     @Override
     public void renderHistory(History history) {
         mHistory = history;
-        mBinding.control.action.opening.setText(openingText(history.getOpening()));
-        mBinding.control.action.ending.setText(endingText(history.getEnding()));
+        mBinding.sheet.opening.setText(openingText(history.getOpening()));
+        mBinding.sheet.ending.setText(endingText(history.getEnding()));
         player().setSpeed(SpeedSetting.getPlayback());
         setScale(getScale());
         setPartAdapter();
@@ -738,7 +748,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     @Override
     public void renderUseParse(boolean useParse) {
         setUseParse(useParse);
-        mBinding.control.action.parse.setVisibility(isUseParse() ? View.VISIBLE : View.GONE);
+        mBinding.sheet.parse.setVisibility(isUseParse() ? View.VISIBLE : View.GONE);
     }
 
     @Override
@@ -858,8 +868,13 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mVod.selectFlag(item);
     }
 
+    public List<Episode> episodes() {
+        return mEpisodeAdapter.snapshot();
+    }
+
     private void setEpisodeAdapter(List<Episode> items) {
         mBinding.episode.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
+        mBinding.control.action.episodes.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
         mEpisodeAdapter.addAll(items);
         setArrayAdapter(items.size());
         setR2Callback();
@@ -940,6 +955,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mBinding.flag.setSelectedPosition(mFlagAdapter.getPosition());
         mInput.setFullscreen(true);
         setFullscreen(true);
+        mBinding.widget.corner.setVisibility(View.VISIBLE);
+        startTraffic();
         mFocus2 = null;
     }
 
@@ -949,6 +966,9 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         getFocus1().requestFocus();
         mInput.setFullscreen(false);
         setFullscreen(false);
+        mBinding.widget.corner.setVisibility(View.GONE);
+        mBinding.widget.netSpeed.setVisibility(View.GONE);
+        if (!isVisible(mBinding.progress.getRoot())) stopTraffic();
         mFocus2 = null;
         hideInfo();
     }
@@ -977,12 +997,12 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void onRepeat() {
         player().setRepeatOne(!player().isRepeatOne());
-        mBinding.control.action.repeat.setSelected(player().isRepeatOne());
+        mBinding.sheet.repeat.setSelected(player().isRepeatOne());
     }
 
     @Override
     public void onRepeatModeChanged(int repeatMode) {
-        mBinding.control.action.repeat.setSelected(player().isRepeatOne());
+        mBinding.sheet.repeat.setSelected(player().isRepeatOne());
     }
 
     private void checkNext() {
@@ -1063,7 +1083,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void setOpening(long opening) {
         mVod.setOpening(opening);
-        mBinding.control.action.opening.setText(openingText(opening));
+        mBinding.sheet.opening.setText(openingText(opening));
     }
 
     private String openingText(long opening) {
@@ -1091,7 +1111,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void setEnding(long ending) {
         mVod.setEnding(ending);
-        mBinding.control.action.ending.setText(endingText(ending));
+        mBinding.sheet.ending.setText(endingText(ending));
     }
 
     private String endingText(long ending) {
@@ -1145,15 +1165,14 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void showProgress() {
         mBinding.progress.getRoot().setVisibility(View.VISIBLE);
-        App.post(mR3, 0);
+        startTraffic();
         hideCenter();
         hideError();
     }
 
     private void hideProgress() {
         mBinding.progress.getRoot().setVisibility(View.GONE);
-        App.removeCallbacks(mR3);
-        Traffic.reset();
+        if (!isFullscreen()) stopTraffic();
     }
 
     private void showError(String text) {
@@ -1181,7 +1200,9 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void showControl(View view) {
         updateDiscMenuVisibility();
-        mBinding.control.action.playPause.setText(isPlayingForControls() ? R.string.atv_pause : R.string.atv_play);
+        boolean playing = isPlayingForControls();
+        mBinding.control.action.playPause.setImageResource(playing ? R.drawable.ic_atv_pause : R.drawable.ic_atv_play);
+        mBinding.control.action.playPause.setContentDescription(getString(playing ? R.string.atv_pause : R.string.atv_play));
         mBinding.control.getRoot().setVisibility(View.VISIBLE);
         view.requestFocus();
         setR1Callback();
@@ -1189,6 +1210,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void hideControl() {
         mBinding.control.getRoot().setVisibility(View.GONE);
+        hideMore();
         App.removeCallbacks(mR1);
     }
 
@@ -1197,9 +1219,35 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         hideInfo();
     }
 
+    private void startTraffic() {
+        App.removeCallbacks(mR3);
+        App.post(mR3, 0);
+    }
+
+    private void stopTraffic() {
+        App.removeCallbacks(mR3);
+        Traffic.reset();
+        mBinding.widget.netSpeed.setVisibility(View.GONE);
+    }
+
     private void setTraffic() {
-        Traffic.setSpeed(mBinding.progress.traffic);
-        App.post(mR3, 1000);
+        String speed = Traffic.readSpeed();
+        if (speed == null) {
+            mBinding.widget.netSpeed.setVisibility(View.GONE);
+        } else {
+            if (isVisible(mBinding.progress.getRoot())) {
+                mBinding.progress.traffic.setVisibility(View.VISIBLE);
+                mBinding.progress.traffic.setText(speed);
+            }
+            if (isFullscreen()) {
+                mBinding.widget.netSpeed.setVisibility(View.VISIBLE);
+                mBinding.widget.netSpeed.setText(speed);
+            } else {
+                mBinding.widget.netSpeed.setVisibility(View.GONE);
+            }
+        }
+        if (isFullscreen() || isVisible(mBinding.progress.getRoot())) App.post(mR3, 1000);
+        else stopTraffic();
     }
 
     private void setR1Callback() {
@@ -1385,7 +1433,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void updateDiscMenuVisibility() {
-        View button = mBinding.control.action.discMenu;
+        View button = mBinding.sheet.discMenu;
         boolean focused = button.hasFocus();
         boolean available = hasDiscMenu();
         button.setVisibility(available ? View.VISIBLE : View.GONE);
@@ -1495,12 +1543,12 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     protected void onWebPlaybackChanged(boolean active) {
-        PlaybackAction.setWebPlaybackMode(active, mBinding.control.action.player, mBinding.control.action.decoder, mBinding.control.action.reset, mBinding.control.action.replay, mBinding.control.action.repeat, mBinding.control.action.speed, mBinding.control.action.scale, mBinding.control.action.text, mBinding.control.action.audio, mBinding.control.action.video, mBinding.control.action.danmaku, mBinding.control.action.edition, mBinding.control.action.chapter, mBinding.control.action.opening, mBinding.control.action.ending);
+        PlaybackAction.setWebPlaybackMode(active, mBinding.sheet.player, mBinding.sheet.decoder, mBinding.sheet.reset, mBinding.sheet.replay, mBinding.sheet.repeat, mBinding.control.action.speed, mBinding.sheet.scale, mBinding.sheet.text, mBinding.sheet.audio, mBinding.sheet.video, mBinding.sheet.danmaku, mBinding.sheet.edition, mBinding.sheet.chapter, mBinding.sheet.opening, mBinding.sheet.ending);
         if (!active) {
             setPlaybackMode();
             setTrackVisible();
             setMediaOptionVisible();
-            mBinding.control.action.danmaku.setVisibility(DanmakuSetting.isLoad() ? View.VISIBLE : View.GONE);
+            mBinding.sheet.danmaku.setVisibility(DanmakuSetting.isLoad() ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -1517,12 +1565,12 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void setTrackVisible() {
         if (isWebPlaybackActive()) return;
-        PlaybackAction.setTracks(player(), mBinding.control.action.text, mBinding.control.action.audio, mBinding.control.action.video);
+        PlaybackAction.setTracks(player(), mBinding.sheet.text, mBinding.sheet.audio, mBinding.sheet.video);
     }
 
     private void setMediaOptionVisible() {
         if (isWebPlaybackActive()) return;
-        PlaybackAction.setMediaOptions(player(), mBinding.control.action.edition, mBinding.control.action.chapter);
+        PlaybackAction.setMediaOptions(player(), mBinding.sheet.edition, mBinding.sheet.chapter);
     }
 
     @Override
@@ -1584,7 +1632,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private View getFocus2() {
-        return mFocus2 == null || !mFocus2.isAttachedToWindow() || mFocus2.getVisibility() != View.VISIBLE || mFocus2 == mBinding.control.action.opening || mFocus2 == mBinding.control.action.ending ? mBinding.control.action.playPause : mFocus2;
+        return mFocus2 == null || !mFocus2.isAttachedToWindow() || mFocus2.getVisibility() != View.VISIBLE || mFocus2 == mBinding.sheet.opening || mFocus2 == mBinding.sheet.ending ? mBinding.control.action.playPause : mFocus2;
     }
 
     @Override
@@ -1597,7 +1645,6 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
             return true;
         }
         if (isFullscreen() && KeyUtil.isMenuKey(event)) {
-            if (isGone(mBinding.control.getRoot())) showControl(mBinding.control.action.more);
             onMore();
             return true;
         }
@@ -1643,11 +1690,13 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         long position = player().getPosition();
         long duration = player().getDuration();
         if (player().canSetOpening(position, duration)) {
+            hideControl();
             showMorePanel();
-            showControl(mBinding.control.action.opening);
+            mBinding.sheet.opening.requestFocus();
         } else if (player().canSetEnding(position, duration)) {
+            hideControl();
             showMorePanel();
-            showControl(mBinding.control.action.ending);
+            mBinding.sheet.ending.requestFocus();
         } else showControl(getFocus2());
     }
 
@@ -1695,6 +1744,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     protected void onBackInvoked() {
         if (handleWebViewNavigation()) {
             return;
+        } else if (isVisible(mBinding.sheet.getRoot())) {
+            hideMore();
         } else if (isVisible(mBinding.control.getRoot())) {
             hideControl();
         } else if (handleDiscMenuBack()) {

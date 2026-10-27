@@ -60,7 +60,8 @@ public class ImgUtil {
 
     public static void load(String url, CustomTarget<Bitmap> target) {
         try {
-            Glide.with(App.get()).asBitmap().load(getUrl(url)).override(ResUtil.dp2px(96), ResUtil.dp2px(96)).error(R.drawable.artwork).into(target);
+            Object source = TextUtils.isEmpty(url) ? R.drawable.atv_poster_empty : getUrl(url);
+            Glide.with(App.get()).asBitmap().load(source).override(ResUtil.dp2px(96), ResUtil.dp2px(96)).error(R.drawable.atv_poster_empty).into(target);
         } catch (Throwable e) {
             e.printStackTrace();
         }
@@ -68,7 +69,8 @@ public class ImgUtil {
 
     public static void load(Context context, String url, CustomTarget<Drawable> target) {
         try {
-            Glide.with(context).load(getUrl(url)).override(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()).error(R.drawable.artwork).into(target);
+            Object source = TextUtils.isEmpty(url) ? R.drawable.atv_poster_empty : getUrl(url);
+            Glide.with(context).load(source).override(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()).placeholder(R.drawable.atv_poster_empty).error(R.drawable.atv_poster_empty).into(target);
         } catch (Throwable e) {
             e.printStackTrace();
         }
@@ -89,7 +91,8 @@ public class ImgUtil {
         if (!vod) view.setVisibility(View.VISIBLE);
         if (TextUtils.isEmpty(url) || failed.contains(url)) {
             Glide.with(view).clear(view);
-            view.setImageDrawable(getTextDrawable(text, vod));
+            if (vod) view.setImageResource(R.drawable.atv_poster_empty);
+            else view.setImageDrawable(getTextDrawable(text, vod));
             return;
         }
         loadImage(text, url, view, vod);
@@ -98,7 +101,7 @@ public class ImgUtil {
     private static void loadImage(String text, String url, ImageView view, boolean vod) {
         try {
             RequestBuilder<Drawable> builder = Glide.with(view).load(getUrl(url)).listener(getListener(text, url, view, vod));
-            if (vod) builder.centerCrop().into(view);
+            if (vod) builder.placeholder(R.drawable.atv_poster_empty).centerCrop().into(view);
             else builder.fitCenter().into(view);
         } catch (Throwable e) {
             e.printStackTrace();
@@ -170,7 +173,8 @@ public class ImgUtil {
         return new RequestListener<>() {
             @Override
             public boolean onLoadFailed(@Nullable GlideException e, Object model, @NonNull Target<Drawable> target, boolean isFirstResource) {
-                view.setImageDrawable(getTextDrawable(text, vod));
+                if (vod) view.setImageResource(R.drawable.atv_poster_empty);
+                else view.setImageDrawable(getTextDrawable(text, vod));
                 failed.add(url);
                 return true;
             }

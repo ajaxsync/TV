@@ -17,8 +17,7 @@
             style="@style/Shadow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:layout_toStartOf="@+id/clock"
+            android:layout_marginEnd="120dp"
             android:ellipsize="marquee"
             android:singleLine="true"
             android:textColor="@color/white"
@@ -32,8 +31,7 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/title"
             android:layout_alignStart="@+id/title"
-            android:layout_marginEnd="16dp"
-            android:layout_toStartOf="@+id/clock"
+            android:layout_marginEnd="120dp"
             android:ellipsize="end"
             android:singleLine="true"
             android:textColor="@color/white_80"
@@ -42,18 +40,43 @@
             tools:text="第1集"
             tools:visibility="visible" />
 
+    </RelativeLayout>
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/corner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:gravity="end"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/clock"
             style="@style/Shadow"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
             android:fontFeatureSettings="tnum"
             android:textColor="@color/white"
             android:textSize="20sp"
             tools:text="09:20:00" />
 
-    </RelativeLayout>
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/netSpeed"
+            style="@style/Shadow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFeatureSettings="tnum"
+            android:textColor="@color/white_80"
+            android:textSize="12sp"
+            android:visibility="gone"
+            tools:text="0 KB/s"
+            tools:visibility="visible" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
 
     <androidx.appcompat.widget.LinearLayoutCompat
         android:id="@+id/error"

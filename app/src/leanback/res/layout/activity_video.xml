@@ -48,6 +48,14 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <include
+            android:id="@+id/sheet"
+            layout="@layout/view_control_vod_more"
+            android:layout_width="340dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:visibility="gone" />
+
     </FrameLayout>
 
     <com.google.android.material.textview.MaterialTextView

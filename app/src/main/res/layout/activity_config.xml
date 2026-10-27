@@ -26,9 +26,10 @@
 
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/text"
-        android:background="@drawable/atv_nav_bg"
+        android:background="@drawable/atv_input_bg"
         android:padding="16dp"
         android:textColorHint="@color/atv_text_secondary"
+        android:textCursorDrawable="@drawable/shape_cursor"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/dialog_config_url"
