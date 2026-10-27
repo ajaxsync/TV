@@ -49,8 +49,10 @@ public class CustomRowPresenter extends ListRowPresenter {
         grid.setHorizontalSpacing(ResUtil.dp2px(spacing));
         grid.setClipChildren(false);
         grid.setClipToPadding(false);
-        holder.view.setClipChildren(false);
-        holder.view.setClipToPadding(false);
+        if (holder.view instanceof android.view.ViewGroup row) {
+            row.setClipChildren(false);
+            row.setClipToPadding(false);
+        }
         if (recycledViewPool == null) recycledViewPool = grid.getRecycledViewPool();
         else grid.setRecycledViewPool(recycledViewPool);
         ItemBridgeAdapter adapter = vh.getBridgeAdapter();

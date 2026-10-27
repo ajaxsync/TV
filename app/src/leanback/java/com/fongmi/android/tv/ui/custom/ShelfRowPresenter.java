@@ -27,6 +27,5 @@ public class ShelfRowPresenter extends CustomRowPresenter {
         int end = grid.getResources().getDimensionPixelSize(R.dimen.atv_page_padding);
         grid.setPadding(start, ResUtil.dp2px(4), end, ResUtil.dp2px(18));
         grid.setClipToPadding(false);
-        grid.setFocusOutAllowed(true, true);
     }
 }
