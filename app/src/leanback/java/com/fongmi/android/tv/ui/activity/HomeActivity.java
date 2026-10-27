@@ -28,7 +28,6 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
-import com.fongmi.android.tv.Updater;
 import com.fongmi.android.tv.api.SiteApi;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
@@ -62,8 +61,6 @@ import com.fongmi.android.tv.ui.custom.CustomSelector;
 import com.fongmi.android.tv.ui.custom.ShelfRowPresenter;
 import com.fongmi.android.tv.ui.presenter.CategoryMore;
 import com.fongmi.android.tv.ui.presenter.ClassPresenter;
-import com.fongmi.android.tv.ui.presenter.HeroFeature;
-import com.fongmi.android.tv.ui.presenter.HeroPresenter;
 import com.fongmi.android.tv.ui.presenter.HistoryPresenter;
 import com.fongmi.android.tv.ui.presenter.MorePresenter;
 import com.fongmi.android.tv.ui.presenter.ProgressPresenter;
@@ -91,7 +88,6 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
     private static final long ID_CONTINUE = 1L;
     private static final long ID_RECOMMEND = 2L;
     private static final long ID_CATEGORIES = 3L;
-    private static final int HERO_LIMIT = 6;
     private static final int RECOMMEND_LIMIT = 24;
     private static final int CATEGORY_LIMIT = 6;
     private static final int CATEGORY_ITEMS = 12;
@@ -156,7 +152,6 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
         mResult = Result.empty();
         mClock = Clock.create(mBinding.clock);
         mBinding.progressLayout.showProgress();
-        Updater.get().start(this, false);
         setRecyclerView();
         setViewModel();
         setAdapter();
@@ -194,7 +189,6 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
     private void setRecyclerView() {
         CustomSelector selector = new CustomSelector();
         mMorePresenter = new MorePresenter(this);
-        selector.addPresenter(HeroFeature.class, new HeroPresenter(this));
         selector.addPresenter(String.class, new ProgressPresenter());
         selector.addPresenter(Class.class, mClassPresenter = new ClassPresenter(this));
         selector.addPresenter(ListRow.class, new ShelfRowPresenter(18, FocusHighlight.ZOOM_FACTOR_NONE), VodPresenter.class);
@@ -217,7 +211,6 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
     private void onResult(Result result) {
         mAdapter.remove("progress");
         mResult = result == null ? Result.empty() : result;
-        setHero(featured(mResult.getList()));
         addRecommend(mResult);
         loadCategoryShelves(mResult);
         Cache.clear().put(mResult);
@@ -317,12 +310,6 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
 
     private void focusDefault() {
         if (userNavigated || mBinding.emptyConfig.getVisibility() == View.VISIBLE) return;
-        View play = mBinding.recycler.findViewById(R.id.heroPlay);
-        if (play != null) {
-            play.requestFocus();
-            placedFocus = true;
-            return;
-        }
         if (mAdapter.size() > 0) {
             mBinding.recycler.requestFocus();
             placedFocus = true;
@@ -343,29 +330,6 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
             if (isContinue(mAdapter.get(i))) continue;
             mAdapter.removeItems(i, 1);
         }
-    }
-
-    private void setHero(List<Vod> items) {
-        int at = indexOfHero();
-        if (items.isEmpty()) {
-            if (at >= 0) mAdapter.removeItems(at, 1);
-            return;
-        }
-        HeroFeature feature = new HeroFeature(items);
-        if (at < 0) mAdapter.add(0, feature);
-        else mAdapter.replace(at, feature);
-    }
-
-    private List<Vod> featured(List<Vod> list) {
-        List<Vod> playable = new ArrayList<>();
-        for (Vod vod : list) {
-            if (vod.isAction() || vod.isFolder() || vod.getName().isEmpty()) continue;
-            playable.add(vod);
-        }
-        List<Vod> withPic = new ArrayList<>();
-        for (Vod vod : playable) if (!vod.getPic().isEmpty()) withPic.add(vod);
-        List<Vod> source = withPic.isEmpty() ? playable : withPic;
-        return source.subList(0, Math.min(HERO_LIMIT, source.size()));
     }
 
     private void addRecommend(Result result) {
@@ -478,8 +442,7 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
             if (header >= 0) mAdapter.removeItems(header, 1);
         } else {
             if (header < 0) {
-                int at = indexOfHero() >= 0 ? indexOfHero() + 1 : 0;
-                mAdapter.add(at, new ListRow(new HeaderItem(ID_CONTINUE, getString(R.string.atv_continue)), mHistoryAdapter));
+                mAdapter.add(0, new ListRow(new HeaderItem(ID_CONTINUE, getString(R.string.atv_continue)), mHistoryAdapter));
             }
             mHistoryAdapter.setItems(items, new BaseDiffCallback<>());
         }
@@ -515,11 +478,6 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
         return false;
     }
 
-    private int indexOfHero() {
-        for (int i = 0; i < mAdapter.size(); i++) if (mAdapter.get(i) instanceof HeroFeature) return i;
-        return -1;
-    }
-
     private int indexOfHeader(long id) {
         for (int i = 0; i < mAdapter.size(); i++) {
             Object item = mAdapter.get(i);
@@ -532,8 +490,6 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
         int recommend = indexOfHeader(ID_RECOMMEND);
         if (recommend >= 0) return recommend + 1;
         int at = 0;
-        int hero = indexOfHero();
-        if (hero >= 0) at = hero + 1;
         int history = indexOfHeader(ID_CONTINUE);
         if (history >= 0) at = Math.max(at, history + 1);
         int progress = mAdapter.indexOf("progress");
@@ -560,7 +516,7 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
 
     private boolean atRowStart() {
         View focus = getCurrentFocus();
-        if (focus == null || focus.getId() == R.id.heroPlay || mBinding.sidebar.hasFocus()) return false;
+        if (focus == null || mBinding.sidebar.hasFocus()) return false;
         ViewParent parent = focus.getParent();
         if (!(parent instanceof ViewGroup group)) return false;
         int left = focus.getLeft();

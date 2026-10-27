@@ -16,20 +16,26 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-
 public class KeyboardAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private final List<Integer> icons = Arrays.asList(R.drawable.ic_keyboard_remote, R.drawable.ic_keyboard_left, R.drawable.ic_keyboard_right, R.drawable.ic_keyboard_back, R.drawable.ic_keyboard_search, R.drawable.ic_keyboard, R.drawable.ic_setting_home);
-    private final List<String> enList = Arrays.asList("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
-    private final List<String> twList = Arrays.asList("ㄅ", "ㄆ", "ㄇ", "ㄈ", "ㄉ", "ㄊ", "ㄋ", "ㄌ", "ㄍ", "ㄎ", "ㄏ", "ㄐ", "ㄑ", "ㄒ", "ㄓ", "ㄔ", "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ", "ㄧ", "ㄨ", "ㄩ", "ㄚ", "ㄛ", "ㄜ", "ㄝ", "ㄞ", "ㄟ", "ㄠ", "ㄡ", "ㄢ", "ㄣ", "ㄤ", "ㄥ", "ㄦ", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
+    public static final int MODE_26 = 0;
+    public static final int MODE_9 = 1;
+    public static final int SPAN = 21;
+
+    private static final String SWITCH_TO_9 = "九键";
+    private static final String SWITCH_TO_26 = "全键";
+    private static final List<String> GROUPS = Arrays.asList("ABC", "DEF", "GHI", "JKL", "MNO", "PQRS", "TUV", "WXYZ");
+    private static final List<String> LETTERS = Arrays.asList("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
+    private static final List<String> DIGITS = Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8", "9", "0");
+
     private final OnClickListener listener;
-    private final List<Object> mItems;
+    private final List<Object> mItems = new ArrayList<>();
+    private int mode;
 
     public KeyboardAdapter(OnClickListener listener) {
-        this.mItems = new ArrayList<>();
         this.listener = listener;
-        this.mItems.addAll(icons);
-        this.mItems.addAll(Setting.isZhuyin() ? twList : enList);
+        this.mode = Setting.getKeyboardMode() == MODE_9 ? MODE_9 : MODE_26;
+        rebuild();
     }
 
     public interface OnClickListener {
@@ -41,12 +47,40 @@ public class KeyboardAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         boolean onLongClick(int resId);
     }
 
+    public boolean isSwitch(String text) {
+        return SWITCH_TO_9.equals(text) || SWITCH_TO_26.equals(text);
+    }
+
+    public int spanSize(int position) {
+        Object item = mItems.get(position);
+        if (item instanceof Integer || isSwitch(String.valueOf(item))) return 3;
+        return mode == MODE_9 ? 7 : 3;
+    }
+
     public void toggle() {
-        Setting.putZhuyin(!Setting.isZhuyin());
-        mItems.removeAll(Setting.isZhuyin() ? enList : twList);
-        mItems.addAll(icons.size(), Setting.isZhuyin() ? twList : enList);
-        notifyItemRangeRemoved(icons.size(), Setting.isZhuyin() ? enList.size() : twList.size());
-        notifyItemRangeInserted(icons.size(), Setting.isZhuyin() ? twList.size() : enList.size());
+        mode = mode == MODE_9 ? MODE_26 : MODE_9;
+        Setting.putKeyboardMode(mode);
+        int count = getItemCount();
+        rebuild();
+        notifyItemRangeRemoved(0, count);
+        notifyItemRangeInserted(0, getItemCount());
+    }
+
+    private void rebuild() {
+        mItems.clear();
+        mItems.add(R.drawable.ic_keyboard_remote);
+        mItems.add(R.drawable.ic_keyboard_left);
+        mItems.add(R.drawable.ic_keyboard_right);
+        mItems.add(R.drawable.ic_keyboard_back);
+        mItems.add(R.drawable.ic_keyboard_search);
+        mItems.add(mode == MODE_26 ? SWITCH_TO_9 : SWITCH_TO_26);
+        mItems.add(R.drawable.ic_setting_home);
+        if (mode == MODE_9) {
+            mItems.addAll(GROUPS);
+            mItems.addAll(DIGITS);
+        } else {
+            mItems.addAll(LETTERS);
+        }
     }
 
     @Override
@@ -71,7 +105,9 @@ public class KeyboardAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         switch (getItemViewType(position)) {
             case 0:
                 TextHolder text = (TextHolder) holder;
-                text.binding.text.setText(mItems.get(position).toString());
+                String value = mItems.get(position).toString();
+                text.binding.text.setText(value);
+                text.binding.text.setTextSize(value.length() > 1 ? 14 : 16);
                 break;
             case 1:
                 IconHolder icon = (IconHolder) holder;

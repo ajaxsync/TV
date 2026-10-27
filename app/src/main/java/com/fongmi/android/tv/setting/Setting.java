@@ -114,7 +114,7 @@ public class Setting {
     }
 
     public static boolean getUpdate() {
-        return Prefers.getBoolean("update", true);
+        return false;
     }
 
     public static void putUpdate(boolean update) {
@@ -129,8 +129,16 @@ public class Setting {
         Prefers.put("adblock", adblock);
     }
 
+    public static int getKeyboardMode() {
+        return Prefers.getInt("keyboard_mode", 0);
+    }
+
+    public static void putKeyboardMode(int mode) {
+        Prefers.put("keyboard_mode", mode);
+    }
+
     public static boolean isZhuyin() {
-        return Prefers.getBoolean("zhuyin");
+        return false;
     }
 
     public static void putZhuyin(boolean zhuyin) {

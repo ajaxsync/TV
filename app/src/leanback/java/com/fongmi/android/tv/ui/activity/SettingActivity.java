@@ -9,7 +9,6 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.R;
-import com.fongmi.android.tv.Updater;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
@@ -124,7 +123,6 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         mBinding.module.setOnClickListener(view -> ModuleActivity.start(this));
         mBinding.danmaku.setOnClickListener(this::onDanmaku);
         mBinding.restore.setOnClickListener(this::onRestore);
-        mBinding.version.setOnClickListener(this::onVersion);
         mBinding.vod.setOnLongClickListener(this::onVodEdit);
         mBinding.vodHome.setOnClickListener(this::onVodHome);
         mBinding.live.setOnLongClickListener(this::onLiveEdit);
@@ -257,8 +255,9 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         SettingDanmakuActivity.start(this);
     }
 
-    private void onVersion(View view) {
-        Updater.get().start(this, true);
+    @Override
+    protected boolean customWall() {
+        return false;
     }
 
     private void setWallDefault(View view) {

@@ -65,6 +65,8 @@ public class Updater {
     }
 
     public void start(FragmentActivity activity, boolean force) {
+        return;
+        /* App updates are disabled. The block below is the old GitHub release check.
         if (!force && !modulesChecked) {
             modulesChecked = true;
             Task.execute(this::checkModules);
@@ -82,6 +84,7 @@ public class Updater {
         if (checking || dialog.get() != null || activity.getSupportFragmentManager().findFragmentByTag(UpdateDialog.TAG) != null) return;
         checking = true;
         Task.execute(this::checkRelease);
+        */
     }
 
     private void checkModules() {
@@ -123,11 +126,14 @@ public class Updater {
     }
 
     public void notifyModules() {
+        return;
+        /* Module update notices are disabled with app updates.
         if (moduleUpdates == null || App.activity() == null) return;
         List<String> titles = moduleUpdates.keySet().stream().map(this::getModuleTitle).toList();
         Notify.show(ResUtil.getString(R.string.module_update_notice, String.join(", ", titles)));
         moduleUpdates.forEach((module, version) -> Prefers.put("module_update_" + module.id, version));
         moduleUpdates = null;
+        */
     }
 
     private String getModuleTitle(RuntimeModule module) {

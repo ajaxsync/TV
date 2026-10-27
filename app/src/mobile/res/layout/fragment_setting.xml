@@ -470,6 +470,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:background="@drawable/shape_item"
+                android:clickable="false"
+                android:focusable="false"
                 android:orientation="horizontal">
 
                 <com.google.android.material.textview.MaterialTextView
