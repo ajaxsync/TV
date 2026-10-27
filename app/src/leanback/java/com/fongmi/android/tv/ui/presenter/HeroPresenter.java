@@ -52,14 +52,15 @@ public class HeroPresenter extends Presenter {
         private final Handler handler = new Handler(Looper.getMainLooper());
         private List<Vod> items = List.of();
         private int index;
-        private final Runnable advance = () -> {
-            if (!binding.heroPlay.hasFocus() && items.size() > 1) show((index + 1) % items.size());
-            schedule();
-        };
+        private final Runnable advance;
 
         Holder(ViewAtvHeroBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
+            this.advance = () -> {
+                if (!this.binding.heroPlay.hasFocus() && items.size() > 1) show((index + 1) % items.size());
+                schedule();
+            };
         }
 
         void bind(HeroFeature feature) {
