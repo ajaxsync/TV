@@ -24,6 +24,7 @@
 
     <style name="Theme.App" parent="Theme.Base">
         <item name="android:windowBackground">@color/atv_bg</item>
+        <item name="android:defaultFocusHighlightEnabled">false</item>
     </style>
 
     <style name="Theme.Crash" parent="Theme.Base">

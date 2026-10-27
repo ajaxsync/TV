@@ -4,6 +4,10 @@
     android:id="@+id/text"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:textColor="@color/white"
-    android:textSize="24sp"
+    android:paddingStart="@dimen/atv_shelf_padding_start"
+    android:paddingTop="18dp"
+    android:paddingEnd="@dimen/atv_page_padding"
+    android:paddingBottom="6dp"
+    android:textColor="@color/atv_text_secondary"
+    android:textSize="16sp"
     tools:text="@string/home_recommend" />

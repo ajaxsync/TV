@@ -20,4 +20,5 @@
     <string name="atv_config_vod_title">VOD config</string>
     <string name="atv_config_live_title">Live config</string>
     <string name="atv_watch_history">Watch history</string>
+    <string name="atv_nav_home">Home</string>
 </resources>

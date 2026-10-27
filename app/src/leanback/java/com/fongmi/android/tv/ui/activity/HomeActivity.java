@@ -1,30 +1,35 @@
 package com.fongmi.android.tv.ui.activity;
 
-import android.annotation.SuppressLint;
 import android.app.SearchManager;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewParent;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.leanback.widget.ArrayObjectAdapter;
+import androidx.leanback.widget.BaseGridView;
 import androidx.leanback.widget.FocusHighlight;
+import androidx.leanback.widget.HeaderItem;
 import androidx.leanback.widget.HorizontalGridView;
 import androidx.leanback.widget.ItemBridgeAdapter;
 import androidx.leanback.widget.ListRow;
 import androidx.leanback.widget.OnChildViewHolderSelectedListener;
+import androidx.leanback.widget.Presenter;
+import androidx.leanback.widget.PresenterSelector;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.App;
-import com.fongmi.android.tv.Product;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Updater;
+import com.fongmi.android.tv.api.SiteApi;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
@@ -52,34 +57,44 @@ import com.fongmi.android.tv.service.DLNARendererService;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.ui.adapter.BaseDiffCallback;
 import com.fongmi.android.tv.ui.base.BaseActivity;
-import com.fongmi.android.tv.ui.custom.CustomRowPresenter;
+import com.fongmi.android.tv.ui.custom.AtvSidebar;
 import com.fongmi.android.tv.ui.custom.CustomSelector;
+import com.fongmi.android.tv.ui.custom.ShelfRowPresenter;
+import com.fongmi.android.tv.ui.presenter.CategoryMore;
 import com.fongmi.android.tv.ui.presenter.ClassPresenter;
-import com.fongmi.android.tv.ui.presenter.HeaderPresenter;
+import com.fongmi.android.tv.ui.presenter.HeroFeature;
+import com.fongmi.android.tv.ui.presenter.HeroPresenter;
 import com.fongmi.android.tv.ui.presenter.HistoryPresenter;
+import com.fongmi.android.tv.ui.presenter.MorePresenter;
 import com.fongmi.android.tv.ui.presenter.ProgressPresenter;
 import com.fongmi.android.tv.ui.presenter.VodPresenter;
 import com.fongmi.android.tv.utils.Clock;
-import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.net.OkHttp;
-import com.google.common.collect.Lists;
+import com.github.catvod.utils.Task;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.concurrent.Future;
 
-public class HomeActivity extends BaseActivity implements VodPresenter.OnClickListener, HistoryPresenter.OnClickListener, ClassPresenter.OnClickListener {
+public class HomeActivity extends BaseActivity implements VodPresenter.OnClickListener, HistoryPresenter.OnClickListener, ClassPresenter.OnClickListener, MorePresenter.OnClickListener {
 
     private static final String STATE_ACTION_HANDLED = "action_handled";
+    private static final long ID_CONTINUE = 1L;
+    private static final long ID_RECOMMEND = 2L;
+    private static final long ID_CATEGORIES = 3L;
+    private static final int HERO_LIMIT = 6;
+    private static final int RECOMMEND_LIMIT = 24;
+    private static final int CATEGORY_LIMIT = 6;
+    private static final int CATEGORY_ITEMS = 12;
     private static volatile int instanceCount;
 
     public static boolean isRunning() {
@@ -92,19 +107,19 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
     private HistoryPresenter mPresenter;
     private ClassPresenter mClassPresenter;
     private VodPresenter mVodPresenter;
+    private MorePresenter mMorePresenter;
     private SiteViewModel mViewModel;
     private Intent pendingAction;
+    private Future<?> shelfTask;
     private boolean actionReady;
     private boolean placedFocus;
+    private boolean userNavigated;
+    private int shelfEpoch;
     private Result mResult;
     private Clock mClock;
 
     private Site getHome() {
         return VodConfig.get().getHome();
-    }
-
-    private Config getConfig() {
-        return VodConfig.get().getConfig();
     }
 
     @Override
@@ -150,16 +165,12 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
 
     @Override
     protected void initEvent() {
-        mBinding.navSearch.setOnClickListener(view -> SearchActivity.start(this));
-        mBinding.navHistory.setOnClickListener(view -> HistoryActivity.start(this));
-        mBinding.navLive.setOnClickListener(view -> LiveActivity.start(this));
-        mBinding.navSetting.setOnClickListener(view -> SettingActivity.start(this));
+        mBinding.sidebar.setSection(AtvSidebar.Section.HOME);
         mBinding.addVod.setOnClickListener(view -> ConfigActivity.vod(this));
         mBinding.recycler.addOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
             @Override
             public void onChildViewHolderSelected(@NonNull RecyclerView parent, @Nullable RecyclerView.ViewHolder child, int position, int subposition) {
-                mBinding.toolbar.setVisibility(position == 0 ? View.VISIBLE : View.GONE);
-                if (mPresenter.isDelete()) setHistoryDelete(false);
+                if (mPresenter != null && mPresenter.isDelete()) setHistoryDelete(false);
             }
         });
     }
@@ -180,18 +191,21 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
         checkAction(intent);
     }
 
-    @SuppressLint("RestrictedApi")
     private void setRecyclerView() {
         CustomSelector selector = new CustomSelector();
-        selector.addPresenter(Integer.class, new HeaderPresenter());
+        mMorePresenter = new MorePresenter(this);
+        selector.addPresenter(HeroFeature.class, new HeroPresenter(this));
         selector.addPresenter(String.class, new ProgressPresenter());
-        selector.addPresenter(Vod.class, new VodPresenter(this, Style.list()));
         selector.addPresenter(Class.class, mClassPresenter = new ClassPresenter(this));
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(16), VodPresenter.class);
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_SMALL), ClassPresenter.class);
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_SMALL, HorizontalGridView.FOCUS_SCROLL_ALIGNED), HistoryPresenter.class);
+        selector.addPresenter(ListRow.class, new ShelfRowPresenter(18, FocusHighlight.ZOOM_FACTOR_NONE), VodPresenter.class);
+        selector.addPresenter(ListRow.class, new ShelfRowPresenter(18, FocusHighlight.ZOOM_FACTOR_NONE), ClassPresenter.class);
+        selector.addPresenter(ListRow.class, new ShelfRowPresenter(18, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ALIGNED), HistoryPresenter.class);
         mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter = new ArrayObjectAdapter(selector)));
-        mBinding.recycler.setVerticalSpacing(ResUtil.dp2px(16));
+        mBinding.recycler.setVerticalSpacing(ResUtil.dp2px(28));
+        mBinding.recycler.setWindowAlignment(BaseGridView.WINDOW_ALIGN_BOTH_EDGE);
+        mBinding.recycler.setWindowAlignmentOffsetPercent(BaseGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED);
+        mBinding.recycler.setItemAlignmentOffsetPercent(BaseGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED);
+        mBinding.recycler.setWindowAlignmentOffset(0);
     }
 
     private void setViewModel() {
@@ -202,15 +216,16 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
 
     private void onResult(Result result) {
         mAdapter.remove("progress");
-        setCategories(mResult = result);
-        addVideo(result);
-        Cache.clear().put(result);
+        mResult = result == null ? Result.empty() : result;
+        setHero(featured(mResult.getList()));
+        addRecommend(mResult);
+        loadCategoryShelves(mResult);
+        Cache.clear().put(mResult);
         focusMain();
     }
 
     private void setAdapter() {
         mHistoryAdapter = new ArrayObjectAdapter(mPresenter = new HistoryPresenter(this));
-        mAdapter.add(R.string.home_recommend);
     }
 
     private void checkPermission() {
@@ -221,14 +236,6 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
         PermissionUtil.requestNotify(this);
         if (allGranted) DLNARendererService.start(this);
         initConfig();
-        setTitle();
-        setLogo();
-    }
-
-    private void setTitle() {
-        List<String> items = Arrays.asList(getHome().getName(), getConfig().getName(), getString(R.string.app_name));
-        Optional<String> optional = items.stream().filter(s -> !TextUtils.isEmpty(s)).findFirst();
-        optional.ifPresent(s -> mBinding.title.setText(s));
     }
 
     private void initConfig() {
@@ -268,12 +275,8 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
         boolean empty = TextUtils.isEmpty(VodConfig.getUrl());
         mBinding.emptyConfig.setVisibility(empty ? View.VISIBLE : View.GONE);
         mBinding.progressLayout.setVisibility(empty ? View.GONE : View.VISIBLE);
-        int next = empty ? R.id.addVod : R.id.recycler;
-        mBinding.navSearch.setNextFocusDownId(next);
-        mBinding.navHistory.setNextFocusDownId(next);
-        mBinding.navLive.setNextFocusDownId(next);
-        mBinding.navSetting.setNextFocusDownId(next);
-        if (empty) {
+        mBinding.sidebar.setContentFocusId(empty ? R.id.addVod : R.id.recycler);
+        if (empty && !userNavigated) {
             mBinding.addVod.post(() -> mBinding.addVod.requestFocus());
             placedFocus = true;
         }
@@ -303,38 +306,160 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
     }
 
     private void focusMain() {
-        if (placedFocus || mBinding.emptyConfig.getVisibility() == View.VISIBLE) return;
-        placedFocus = true;
-        mBinding.recycler.post(() -> mBinding.recycler.requestFocus());
+        if (mBinding.emptyConfig.getVisibility() == View.VISIBLE) {
+            if (!userNavigated) mBinding.addVod.post(() -> mBinding.addVod.requestFocus());
+            placedFocus = true;
+            return;
+        }
+        if (userNavigated) return;
+        mBinding.recycler.post(this::focusDefault);
+    }
+
+    private void focusDefault() {
+        if (userNavigated || mBinding.emptyConfig.getVisibility() == View.VISIBLE) return;
+        View play = mBinding.recycler.findViewById(R.id.heroPlay);
+        if (play != null) {
+            play.requestFocus();
+            placedFocus = true;
+            return;
+        }
+        if (mAdapter.size() > 0) {
+            mBinding.recycler.requestFocus();
+            placedFocus = true;
+        }
     }
 
     private void getVideo() {
         mResult = Result.empty();
-        int index = getRecommendIndex();
-        boolean gone = mAdapter.indexOf("progress") == -1;
-        boolean hasItem = gone && mAdapter.size() > index;
-        if (hasItem) mAdapter.removeItems(index, mAdapter.size() - index);
-        if (gone) mAdapter.add("progress");
+        clearShelves();
+        if (mAdapter.indexOf("progress") < 0) mAdapter.add("progress");
         mViewModel.homeContent();
     }
 
-    private void addVideo(Result result) {
+    private void clearShelves() {
+        shelfEpoch++;
+        if (shelfTask != null) shelfTask.cancel(true);
+        for (int i = mAdapter.size() - 1; i >= 0; i--) {
+            if (isContinue(mAdapter.get(i))) continue;
+            mAdapter.removeItems(i, 1);
+        }
+    }
+
+    private void setHero(List<Vod> items) {
+        int at = indexOfHero();
+        if (items.isEmpty()) {
+            if (at >= 0) mAdapter.removeItems(at, 1);
+            return;
+        }
+        HeroFeature feature = new HeroFeature(items);
+        if (at < 0) mAdapter.add(0, feature);
+        else mAdapter.replace(at, feature);
+    }
+
+    private List<Vod> featured(List<Vod> list) {
+        List<Vod> playable = new ArrayList<>();
+        for (Vod vod : list) {
+            if (vod.isAction() || vod.isFolder() || vod.getName().isEmpty()) continue;
+            playable.add(vod);
+        }
+        List<Vod> withPic = new ArrayList<>();
+        for (Vod vod : playable) if (!vod.getPic().isEmpty()) withPic.add(vod);
+        List<Vod> source = withPic.isEmpty() ? playable : withPic;
+        return source.subList(0, Math.min(HERO_LIMIT, source.size()));
+    }
+
+    private void addRecommend(Result result) {
+        int existing = indexOfHeader(ID_RECOMMEND);
+        if (existing >= 0) mAdapter.removeItems(existing, 1);
+        List<Vod> items = new ArrayList<>();
+        for (Vod vod : result.getList()) {
+            if (vod.getName().isEmpty() && vod.getPic().isEmpty()) continue;
+            items.add(vod);
+            if (items.size() == RECOMMEND_LIMIT) break;
+        }
+        if (items.isEmpty()) return;
         Style style = result.getStyle(getHome().getStyle());
-        if (style.isList()) mAdapter.addAll(mAdapter.size(), result.getList());
-        else addGrid(result.getList(), style);
-    }
-
-    private void addGrid(List<Vod> items, Style style) {
-        List<ListRow> rows = new ArrayList<>();
+        if (style.isList()) style = Style.rect();
         if (mVodPresenter == null || !mVodPresenter.matches(style)) mVodPresenter = new VodPresenter(this, style);
-        for (List<Vod> part : Lists.partition(items, Product.getColumn(style))) rows.add(createVideoRow(part));
-        mAdapter.addAll(mAdapter.size(), rows);
-    }
-
-    private ListRow createVideoRow(List<Vod> items) {
+        mMorePresenter.size(style);
         ArrayObjectAdapter adapter = new ArrayObjectAdapter(mVodPresenter);
         adapter.addAll(0, items);
-        return new ListRow(adapter);
+        mAdapter.add(endOfRecommend(), new ListRow(new HeaderItem(ID_RECOMMEND, getString(R.string.home_recommend)), adapter));
+    }
+
+    private void loadCategoryShelves(Result result) {
+        int ticket = ++shelfEpoch;
+        if (shelfTask != null) shelfTask.cancel(true);
+        String key = getHome().getKey();
+        List<Class> types = new ArrayList<>();
+        for (Class type : result.getTypes()) {
+            if (type.isHome() || type.getTypeId().isEmpty() || type.getTypeName().isEmpty()) continue;
+            types.add(type);
+            if (types.size() == CATEGORY_LIMIT) break;
+        }
+        if (types.isEmpty() || key.isEmpty()) {
+            if (!result.getTypes().isEmpty()) showCategoryChips(result);
+            return;
+        }
+        shelfTask = Task.submit(() -> {
+            for (int i = 0; i < types.size(); i++) {
+                if (ticket != shelfEpoch || Thread.currentThread().isInterrupted()) return;
+                Class type = types.get(i);
+                List<Vod> ready = List.of();
+                try {
+                    Result page = SiteApi.categoryContent(key, type.getTypeId(), "1", type.getFilter(), new HashMap<>());
+                    List<Vod> fetched = new ArrayList<>();
+                    for (Vod vod : page.getList()) {
+                        if (vod.getName().isEmpty()) continue;
+                        fetched.add(vod);
+                        if (fetched.size() == CATEGORY_ITEMS) break;
+                    }
+                    ready = fetched;
+                } catch (Exception ignored) {
+                }
+                int order = i;
+                int index = Math.max(0, result.getTypes().indexOf(type));
+                List<Vod> items = ready;
+                boolean last = i == types.size() - 1;
+                App.post(() -> {
+                    if (ticket != shelfEpoch || isFinishing()) return;
+                    if (!items.isEmpty()) addCategoryShelf(type, order, index, items);
+                    if (last) showCategoryChips(result);
+                });
+            }
+        });
+    }
+
+    private void addCategoryShelf(Class type, int order, int index, List<Vod> items) {
+        long id = 100L + order;
+        if (indexOfHeader(id) >= 0) return;
+        if (mVodPresenter == null) mVodPresenter = new VodPresenter(this, Style.rect());
+        ArrayObjectAdapter adapter = new ArrayObjectAdapter(shelfSelector());
+        adapter.addAll(0, items);
+        adapter.add(new CategoryMore(index, type.getTypeName()));
+        mAdapter.add(categoryInsertAt(order), new ListRow(new HeaderItem(id, type.getTypeName()), adapter));
+    }
+
+    private PresenterSelector shelfSelector() {
+        return new PresenterSelector() {
+            @Override
+            public Presenter getPresenter(Object item) {
+                return item instanceof CategoryMore ? mMorePresenter : mVodPresenter;
+            }
+
+            @NonNull
+            @Override
+            public Presenter[] getPresenters() {
+                return new Presenter[]{mVodPresenter, mMorePresenter};
+            }
+        };
+    }
+
+    private void showCategoryChips(Result result) {
+        if (result.getTypes().isEmpty() || indexOfHeader(ID_CATEGORIES) >= 0 || hasCategoryShelf()) return;
+        ArrayObjectAdapter row = new ArrayObjectAdapter(mClassPresenter);
+        row.addAll(0, result.getTypes());
+        mAdapter.add(new ListRow(new HeaderItem(ID_CATEGORIES, getString(R.string.atv_categories)), row));
     }
 
     private void getHistory() {
@@ -343,38 +468,27 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
 
     private void getHistory(boolean renew) {
         List<History> items = History.get();
-        if (renew) mHistoryAdapter = new ArrayObjectAdapter(mPresenter = new HistoryPresenter(this));
-        removeContinueRow();
-        if (!items.isEmpty()) {
-            mAdapter.add(0, R.string.atv_continue);
-            mAdapter.add(1, new ListRow(mHistoryAdapter));
+        if (renew) {
+            mHistoryAdapter = new ArrayObjectAdapter(mPresenter = new HistoryPresenter(this));
+            int existing = indexOfHeader(ID_CONTINUE);
+            if (existing >= 0) mAdapter.removeItems(existing, 1);
         }
-        mHistoryAdapter.setItems(items, new BaseDiffCallback<>());
+        int header = indexOfHeader(ID_CONTINUE);
+        if (items.isEmpty()) {
+            if (header >= 0) mAdapter.removeItems(header, 1);
+        } else {
+            if (header < 0) {
+                int at = indexOfHero() >= 0 ? indexOfHero() + 1 : 0;
+                mAdapter.add(at, new ListRow(new HeaderItem(ID_CONTINUE, getString(R.string.atv_continue)), mHistoryAdapter));
+            }
+            mHistoryAdapter.setItems(items, new BaseDiffCallback<>());
+        }
         focusMain();
     }
 
-    private void setCategories(Result result) {
-        int header = mAdapter.indexOf(R.string.atv_categories);
-        if (header >= 0) {
-            int end = mAdapter.indexOf(R.string.home_recommend);
-            int count = end > header ? end - header : 1;
-            mAdapter.removeItems(header, count);
-        }
-        List<Class> types = result.getTypes();
-        if (types.isEmpty()) return;
-        int at = mAdapter.indexOf(R.string.home_recommend);
-        if (at < 0) at = mAdapter.size();
-        ArrayObjectAdapter row = new ArrayObjectAdapter(mClassPresenter);
-        row.addAll(0, types);
-        mAdapter.add(at, R.string.atv_categories);
-        mAdapter.add(at + 1, new ListRow(row));
-    }
-
     private void removeContinueRow() {
-        int header = mAdapter.indexOf(R.string.atv_continue);
-        if (header < 0) return;
-        int count = header + 1 < mAdapter.size() && mAdapter.get(header + 1) instanceof ListRow ? 2 : 1;
-        mAdapter.removeItems(header, count);
+        int header = indexOfHeader(ID_CONTINUE);
+        if (header >= 0) mAdapter.removeItems(header, 1);
     }
 
     private void setHistoryDelete(boolean delete) {
@@ -389,12 +503,72 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
         mHistoryAdapter.clear();
     }
 
-    private int getRecommendIndex() {
-        return mAdapter.indexOf(R.string.home_recommend) + 1;
+    private boolean isContinue(Object item) {
+        return item instanceof ListRow row && row.getHeaderItem() != null && row.getHeaderItem().getId() == ID_CONTINUE;
     }
 
-    private void setLogo() {
-        ImgUtil.logo(mBinding.logo);
+    private boolean hasCategoryShelf() {
+        for (int i = 0; i < mAdapter.size(); i++) {
+            Object item = mAdapter.get(i);
+            if (item instanceof ListRow row && row.getHeaderItem() != null && row.getHeaderItem().getId() >= 100L) return true;
+        }
+        return false;
+    }
+
+    private int indexOfHero() {
+        for (int i = 0; i < mAdapter.size(); i++) if (mAdapter.get(i) instanceof HeroFeature) return i;
+        return -1;
+    }
+
+    private int indexOfHeader(long id) {
+        for (int i = 0; i < mAdapter.size(); i++) {
+            Object item = mAdapter.get(i);
+            if (item instanceof ListRow row && row.getHeaderItem() != null && row.getHeaderItem().getId() == id) return i;
+        }
+        return -1;
+    }
+
+    private int endOfRecommend() {
+        int recommend = indexOfHeader(ID_RECOMMEND);
+        if (recommend >= 0) return recommend + 1;
+        int at = 0;
+        int hero = indexOfHero();
+        if (hero >= 0) at = hero + 1;
+        int history = indexOfHeader(ID_CONTINUE);
+        if (history >= 0) at = Math.max(at, history + 1);
+        int progress = mAdapter.indexOf("progress");
+        if (progress >= 0) at = Math.max(at, progress + 1);
+        return at;
+    }
+
+    private int categoryInsertAt(int order) {
+        int at = endOfRecommend();
+        int recommend = indexOfHeader(ID_RECOMMEND);
+        if (recommend >= 0) at = recommend + 1;
+        for (int i = 0; i < order; i++) {
+            int found = indexOfHeader(100L + i);
+            if (found >= 0) at = found + 1;
+        }
+        return at;
+    }
+
+    private boolean atTop() {
+        if (mBinding.sidebar.hasFocus()) return false;
+        if (mBinding.emptyConfig.getVisibility() == View.VISIBLE) return mBinding.addVod.hasFocus();
+        return mBinding.recycler.getSelectedPosition() <= 0;
+    }
+
+    private boolean atRowStart() {
+        View focus = getCurrentFocus();
+        if (focus == null || focus.getId() == R.id.heroPlay || mBinding.sidebar.hasFocus()) return false;
+        ViewParent parent = focus.getParent();
+        if (!(parent instanceof ViewGroup group)) return false;
+        int left = focus.getLeft();
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View child = group.getChildAt(i);
+            if (child != focus && child.isFocusable() && child.getLeft() + 8 < left) return false;
+        }
+        return true;
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -402,10 +576,10 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
         switch (event.type()) {
             case VOD:
                 placedFocus = false;
+                userNavigated = false;
                 updateEmpty();
                 RefreshEvent.history();
                 RefreshEvent.home();
-                setLogo();
                 break;
             case COMMON:
                 break;
@@ -420,7 +594,6 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
         switch (event.getType()) {
             case HOME:
                 getVideo();
-                setTitle();
                 break;
             case HISTORY:
                 getHistory();
@@ -462,6 +635,11 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
                 Notify.show(msg);
             }
         };
+    }
+
+    @Override
+    public void onMore(CategoryMore item) {
+        if (mResult != null) VodActivity.start(this, mResult, item.index);
     }
 
     @Override
@@ -511,6 +689,19 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
             SettingActivity.start(this);
             return true;
         }
+        if (KeyUtil.isActionDown(event)) {
+            if (KeyUtil.isUpKey(event) && atTop()) {
+                userNavigated = true;
+                mBinding.sidebar.focusSection();
+                return true;
+            }
+            if (KeyUtil.isLeftKey(event) && atRowStart()) {
+                userNavigated = true;
+                mBinding.sidebar.focusSection();
+                return true;
+            }
+            userNavigated = true;
+        }
         return super.dispatchKeyEvent(event);
     }
 
@@ -528,9 +719,11 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
 
     @Override
     protected void onBackInvoked() {
-        if (mBinding.progressLayout.isProgress()) {
+        if (mBinding.sidebar.hasFocus()) {
+            mBinding.sidebar.focusContent();
+        } else if (mBinding.progressLayout.isProgress()) {
             showContent();
-        } else if (mPresenter.isDelete()) {
+        } else if (mPresenter != null && mPresenter.isDelete()) {
             setHistoryDelete(false);
         } else if (mBinding.recycler.getSelectedPosition() != 0) {
             mBinding.recycler.scrollToPosition(0);
@@ -542,6 +735,8 @@ public class HomeActivity extends BaseActivity implements VodPresenter.OnClickLi
 
     @Override
     protected void onDestroy() {
+        shelfEpoch++;
+        if (shelfTask != null) shelfTask.cancel(true);
         if (--instanceCount == 0) {
             BackupManager.backup();
             releaseResources();

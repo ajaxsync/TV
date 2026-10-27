@@ -20,4 +20,5 @@
     <string name="atv_config_vod_title">點播配置</string>
     <string name="atv_config_live_title">直播配置</string>
     <string name="atv_watch_history">播放歷史</string>
+    <string name="atv_nav_home">首頁</string>
 </resources>

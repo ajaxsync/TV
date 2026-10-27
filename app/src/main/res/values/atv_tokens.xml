@@ -7,7 +7,14 @@
     <color name="atv_on_focus">#0C0C0E</color>
     <color name="atv_text_secondary">#A1A1A6</color>
 
+    <color name="atv_sidebar">#C20C0C0E</color>
+    <color name="atv_side_selected">#33FFFFFF</color>
+    <color name="atv_hero_scrim">#F20C0C0E</color>
+
     <dimen name="atv_nav_gap">12dp</dimen>
-    <dimen name="atv_page_padding">24dp</dimen>
-    <dimen name="atv_focus_radius">12dp</dimen>
+    <dimen name="atv_page_padding">36dp</dimen>
+    <dimen name="atv_focus_radius">14dp</dimen>
+    <dimen name="atv_sidebar_width">196dp</dimen>
+    <dimen name="atv_shelf_padding_start">220dp</dimen>
+    <dimen name="atv_hero_height">380dp</dimen>
 </resources>
