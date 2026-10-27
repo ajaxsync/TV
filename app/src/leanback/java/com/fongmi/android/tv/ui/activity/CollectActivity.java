@@ -63,6 +63,11 @@ public class CollectActivity extends BaseActivity {
     }
 
     @Override
+    protected boolean customWall() {
+        return false;
+    }
+
+    @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         getIntent().putExtras(intent);

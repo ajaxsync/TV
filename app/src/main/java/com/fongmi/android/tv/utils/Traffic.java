@@ -19,9 +19,15 @@ public class Traffic {
     private static long lastTimeStamp;
 
     public static void setSpeed(TextView view) {
-        if (TrafficStats.getUidRxBytes(UID) == TrafficStats.UNSUPPORTED) return;
+        String speed = readSpeed();
+        if (speed == null) return;
         view.setVisibility(View.VISIBLE);
-        view.setText(getSpeed());
+        view.setText(speed);
+    }
+
+    public static String readSpeed() {
+        if (TrafficStats.getUidRxBytes(UID) == TrafficStats.UNSUPPORTED) return null;
+        return getSpeed();
     }
 
     private static String getSpeed() {

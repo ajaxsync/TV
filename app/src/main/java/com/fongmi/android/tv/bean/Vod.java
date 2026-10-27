@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 @Root(strict = false)
@@ -272,7 +274,23 @@ public class Vod implements Parcelable, Diffable<Vod> {
     }
 
     public int getRemarkVisible() {
-        return getRemarks().isEmpty() ? View.GONE : View.VISIBLE;
+        return getRemarks().isEmpty() || isHiddenScore(getRemarks()) ? View.GONE : View.VISIBLE;
+    }
+
+    /**
+     * Corner tags such as {@code 0} or {@code 评分:0} are empty scores. Real scores and other remarks stay visible.
+     */
+    static boolean isHiddenScore(String remarks) {
+        String text = remarks == null ? "" : remarks.trim();
+        if (text.isEmpty()) return true;
+        if (text.matches("(?i)^(评分|score)\\s*[:：]?\\s*$")) return true;
+        Matcher matcher = Pattern.compile("(?i)^(?:评分|score)?\\s*[:：]?\\s*([+-]?\\d+(?:\\.\\d+)?)\\s*分?$").matcher(text);
+        if (!matcher.matches()) return false;
+        try {
+            return Math.abs(Double.parseDouble(matcher.group(1))) < 0.0001d;
+        } catch (NumberFormatException e) {
+            return true;
+        }
     }
 
     public boolean isFolder() {

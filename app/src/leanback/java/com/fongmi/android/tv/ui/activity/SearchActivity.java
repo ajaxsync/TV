@@ -72,6 +72,11 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     }
 
     @Override
+    protected boolean customWall() {
+        return false;
+    }
+
+    @Override
     protected void initView(Bundle savedInstanceState) {
         CustomKeyboard.init(this, mBinding);
         setRecyclerView();

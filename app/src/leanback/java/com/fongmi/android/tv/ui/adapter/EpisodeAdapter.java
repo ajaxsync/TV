@@ -38,6 +38,10 @@ public class EpisodeAdapter extends RecyclerView.Adapter<EpisodeAdapter.ViewHold
         notifyDataSetChanged();
     }
 
+    public List<Episode> snapshot() {
+        return new ArrayList<>(mItems);
+    }
+
     public int getPosition() {
         for (int i = 0; i < mItems.size(); i++) if (mItems.get(i).isSelected()) return i;
         return 0;
